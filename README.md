@@ -1,15 +1,8 @@
-![image](https://user-images.githubusercontent.com/487999/79708354-29074a80-82fa-11ea-80df-0db3962fb453.png)
-
-# 예제 - 음식배달
-
-본 예제는 MSA/DDD/Event Storming/EDA 를 포괄하는 분석/설계/구현/운영 전단계를 커버하도록 구성한 예제입니다.
-이는 클라우드 네이티브 애플리케이션의 개발에 요구되는 체크포인트들을 통과하기 위한 예시 답안을 포함합니다.
-- 체크포인트 : https://workflowy.com/s/assessment-check-po/T5YrzcMewfo4J6LW
-
+제목 - 편의점 관리
 
 # Table of contents
 
-- [예제 - 음식배달](#---)
+- [예제 - 편의점 관리](#---)
   - [서비스 시나리오](#서비스-시나리오)
   - [체크포인트](#체크포인트)
   - [분석/설계](#분석설계)
@@ -28,27 +21,24 @@
 
 # 서비스 시나리오
 
-배달의 민족 커버하기 - https://1sung.tistory.com/106
-
 기능적 요구사항
-1. 고객이 메뉴를 선택하여 주문한다
-1. 고객이 결제한다
-1. 주문이 되면 주문 내역이 입점상점주인에게 전달된다
-1. 상점주인이 확인하여 요리해서 배달 출발한다
-1. 고객이 주문을 취소할 수 있다
-1. 주문이 취소되면 배달이 취소된다
-1. 고객이 주문상태를 중간중간 조회한다
-1. 주문상태가 바뀔 때 마다 카톡으로 알림을 보낸다
+1. 편의점주가 상품을 발주한다.
+1. 발주 내용이 본사에 전달되어 상품을 배송한다.
+1. 배송된 상품을 입고 처리한다.
+1. 고객이 상품을 구매한다.
+1. 구매 상품에 대한 상품 재고를 변경 처리한다.
+1. 편의점주는 상품 발주를 취소할 수 있다.
+1. 고객이 상품 구매를 취소하면 재고가 변경된다.
+1. 주문, 구매에 대한 내용을 마이페이지에서 조회할 수 있다.
 
 비기능적 요구사항
 1. 트랜잭션
-    1. 결제가 되지 않은 주문건은 아예 거래가 성립되지 않아야 한다  Sync 호출 
+    1. 발주 취소시 배송취소가 함께 처리되도록 한다.  Sync 호출 
 1. 장애격리
-    1. 상점관리 기능이 수행되지 않더라도 주문은 365일 24시간 받을 수 있어야 한다  Async (event-driven), Eventual Consistency
-    1. 결제시스템이 과중되면 사용자를 잠시동안 받지 않고 결제를 잠시후에 하도록 유도한다  Circuit breaker, fallback
+    1. 제고변경 처리가 지연되더라도 고객의 구매는 처리할 수 있도록 유도한다.  Async (event-driven), Eventual Consistency
+    1. 배송 시스템에 장애가 발생하더라도 발주 취소는 처리될 수 있도록 한다. (Citcuit breaker, fallback)
 1. 성능
-    1. 고객이 자주 상점관리에서 확인할 수 있는 배달상태를 주문시스템(프론트엔드)에서 확인할 수 있어야 한다  CQRS
-    1. 배달상태가 바뀔때마다 카톡 등으로 알림을 줄 수 있어야 한다  Event driven
+    1. 편의점주는 발주, 배송, 상품 재고, 구매 현황에 대해 확인할 수 있어야 한다  CQRS, Event driven
 
 
 # 체크포인트
@@ -788,70 +778,3 @@ Concurrency:		       96.02
 ```
 
 배포기간 동안 Availability 가 변화없기 때문에 무정지 재배포가 성공한 것으로 확인됨.
-
-
-# 신규 개발 조직의 추가
-
-  ![image](https://user-images.githubusercontent.com/487999/79684133-1d6c4300-826a-11ea-94a2-602e61814ebf.png)
-
-
-## 마케팅팀의 추가
-    - KPI: 신규 고객의 유입률 증대와 기존 고객의 충성도 향상
-    - 구현계획 마이크로 서비스: 기존 customer 마이크로 서비스를 인수하며, 고객에 음식 및 맛집 추천 서비스 등을 제공할 예정
-
-## 이벤트 스토밍 
-    ![image](https://user-images.githubusercontent.com/487999/79685356-2b729180-8273-11ea-9361-a434065f2249.png)
-
-
-## 헥사고날 아키텍처 변화 
-
-![image](https://user-images.githubusercontent.com/487999/79685243-1d704100-8272-11ea-8ef6-f4869c509996.png)
-
-## 구현  
-
-기존의 마이크로 서비스에 수정을 발생시키지 않도록 Inbund 요청을 REST 가 아닌 Event 를 Subscribe 하는 방식으로 구현. 기존 마이크로 서비스에 대하여 아키텍처나 기존 마이크로 서비스들의 데이터베이스 구조와 관계없이 추가됨. 
-
-## 운영과 Retirement
-
-Request/Response 방식으로 구현하지 않았기 때문에 서비스가 더이상 불필요해져도 Deployment 에서 제거되면 기존 마이크로 서비스에 어떤 영향도 주지 않음.
-
-* [비교] 결제 (pay) 마이크로서비스의 경우 API 변화나 Retire 시에 app(주문) 마이크로 서비스의 변경을 초래함:
-
-예) API 변화시
-```
-# Order.java (Entity)
-
-    @PostPersist
-    public void onPostPersist(){
-
-        fooddelivery.external.결제이력 pay = new fooddelivery.external.결제이력();
-        pay.setOrderId(getOrderId());
-        
-        Application.applicationContext.getBean(fooddelivery.external.결제이력Service.class)
-                .결제(pay);
-
-                --> 
-
-        Application.applicationContext.getBean(fooddelivery.external.결제이력Service.class)
-                .결제2(pay);
-
-    }
-```
-
-예) Retire 시
-```
-# Order.java (Entity)
-
-    @PostPersist
-    public void onPostPersist(){
-
-        /**
-        fooddelivery.external.결제이력 pay = new fooddelivery.external.결제이력();
-        pay.setOrderId(getOrderId());
-        
-        Application.applicationContext.getBean(fooddelivery.external.결제이력Service.class)
-                .결제(pay);
-
-        **/
-    }
-```
